@@ -1,0 +1,1612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roll Call — College Attendance Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#1A1A1A;
+    --paper-dark:#141414;
+    --ink:#EDEDED;
+    --ink-soft:#9B9B9B;
+    --rule:rgba(255,255,255,0.12);
+    --present:#4ADE94;
+    --present-bg:rgba(74,222,148,0.14);
+    --absent:#F87171;
+    --absent-bg:rgba(248,113,113,0.14);
+    --stamp:#F87171;
+    --paper-white:transparent;
+    --gold:#C9A94F;
+    --gold-bright:#E0C77A;
+    --burgundy:#8A7231;
+    --light-warm: rgba(255,255,255,0.05);
+    --light-cool: rgba(255,255,255,0.03);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    position:relative;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+  }
+
+  /* ---- Ambient depth: drifting light + paper grain + vignette ---- */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:-15%;
+    z-index:-2;
+    pointer-events:none;
+    background-image:
+      radial-gradient(circle, var(--light-warm), transparent 62%),
+      radial-gradient(circle, var(--light-cool), transparent 66%);
+    background-size: 60% 60%, 55% 55%;
+    background-repeat: no-repeat, no-repeat;
+    background-position: 12% 10%, 88% 82%;
+    mix-blend-mode: screen;
+    animation: driftLight 56s cubic-bezier(0.45,0,0.15,1) infinite alternate;
+  }
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-2;
+    pointer-events:none;
+    opacity:0.06;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  @keyframes driftLight{
+    0%   { background-position: 12% 10%, 88% 82%; }
+    50%  { background-position: 24% 22%, 76% 70%; }
+    100% { background-position: 8% 26%, 90% 64%; }
+  }
+
+  .atmosphere{ position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+  .vignette{
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
+  }
+  .atmosphere .mote{
+    position:absolute;
+    bottom:-4%;
+    width:2.5px; height:2.5px;
+    border-radius:50%;
+    background: rgba(255,255,255,0.5);
+    box-shadow: 0 0 4px rgba(255,255,255,0.3);
+    opacity:0;
+    animation: moteRise linear infinite;
+  }
+  @keyframes moteRise{
+    0%   { transform:translate(0,0); opacity:0; }
+    16%  { opacity:0.22; }
+    50%  { transform:translate(8px,-52vh); }
+    90%  { opacity:0.10; }
+    100% { transform:translate(-10px,-105vh); opacity:0; }
+  }
+  header.app-header{
+    padding:28px 20px 18px;
+    border-bottom:2px solid var(--gold);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+    background:var(--paper);
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    letter-spacing:0.08em;
+  }
+  h1{
+    font-family:'Source Serif 4', serif;
+    font-weight:700;
+    font-size:26px;
+    margin:0;
+    letter-spacing:-0.01em;
+    color: var(--gold-bright);
+  }
+  .session-info{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-soft);
+    text-align:right;
+  }
+  main{max-width:900px; margin:0 auto; padding:24px 20px 80px;}
+
+  /* Login */
+  .login-wrap{
+    display:flex; flex-direction:column; align-items:center;
+    padding-top:40px;
+  }
+  .ledger-card{
+    background:transparent;
+    padding:28px 0;
+    width:100%;
+    max-width:420px;
+  }
+  .ledger-card h2{
+    font-family:'Source Serif 4', serif;
+    font-size:20px;
+    margin:0 0 4px;
+  }
+  .subtext{color:var(--ink-soft); font-size:13px; margin:0 0 22px;}
+  .role-toggle{display:flex; gap:0; margin-bottom:20px; border:1px solid var(--gold); width:fit-content;}
+  .role-toggle button{
+    border:none; background:transparent; padding:8px 18px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.06em;
+    cursor:pointer; color:var(--ink);
+  }
+  .role-toggle button.active{background:var(--gold); color:var(--paper);}
+  label{
+    display:block; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--ink-soft);
+    margin-bottom:6px; margin-top:16px;
+  }
+  select, input[type=text], input[type=date], input[type=password]{
+    width:100%; padding:10px 10px; font-family:'IBM Plex Sans', sans-serif;
+    font-size:14px; border:1px solid var(--rule); background:var(--paper-dark);
+    color:var(--ink);
+  }
+  select:focus, input:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  .pw-field{position:relative;}
+  .pw-field input[type=text], .pw-field input[type=password]{padding-right:40px;}
+  .pw-toggle{
+    position:absolute; right:2px; top:50%; transform:translateY(-50%);
+    background:transparent; border:none; padding:6px; margin:0;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--ink-soft);
+    transition: color 0.2s ease;
+  }
+  .pw-toggle:hover{color:var(--gold-bright);}
+  .pw-toggle .eye-icon{width:18px; height:18px;}
+  .pw-toggle .eye-closed{display:none;}
+  .pw-toggle.showing .eye-open{display:none;}
+  .pw-toggle.showing .eye-closed{display:inline;}
+  .btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.06em;
+    text-transform:uppercase; background:linear-gradient(135deg, var(--gold), var(--gold-bright)); color:var(--paper);
+    border:none; padding:11px 18px; cursor:pointer; margin-top:20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: background 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s cubic-bezier(0.16,1,0.3,1), transform 0.5s cubic-bezier(0.16,1,0.3,1);
+  }
+  .btn:hover{background:linear-gradient(135deg, var(--gold-bright), var(--gold)); box-shadow: 0 6px 16px rgba(0,0,0,0.5); transform:translateY(-1px);}
+  .btn.secondary{background:transparent; color:var(--gold-bright); border:1px solid var(--gold); transition: background 0.4s cubic-bezier(0.16,1,0.3,1), color 0.4s cubic-bezier(0.16,1,0.3,1);}
+  .btn.small{padding:6px 12px; font-size:11px; margin-top:0;}
+  .error-msg{color:var(--absent); font-size:12px; margin-top:10px; font-family:'IBM Plex Mono',monospace;}
+
+  /* Dashboard shell */
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;}
+  .who{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft);}
+  .who b{color:var(--ink);}
+
+  section.panel{
+    background:transparent;
+    margin-bottom:32px;
+  }
+  .panel-head{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 18px; border-bottom:1px solid var(--rule);
+    flex-wrap:wrap; gap:10px;
+  }
+  .panel-head h3{
+    font-family:'Source Serif 4', serif; font-size:17px; margin:0;
+  }
+  .panel-body{padding:18px;}
+
+  .field-row{display:flex; gap:14px; flex-wrap:wrap;}
+  .field-row > div{flex:1; min-width:160px;}
+
+  /* Roll call table */
+  table.roll{width:100%; border-collapse:collapse; font-size:14px;}
+  table.roll th{
+    text-align:left; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft);
+    padding:8px 6px; border-bottom:1px solid var(--gold);
+  }
+  table.roll td{padding:9px 6px; border-bottom:1px solid var(--rule); vertical-align:middle;}
+  table.roll tr:last-child td{border-bottom:1px solid var(--gold);}
+  .roll-num{font-family:'IBM Plex Mono', monospace; color:var(--ink-soft); font-size:13px;}
+
+  .mark-toggle{display:flex; gap:6px;}
+  .mark-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.04em;
+    padding:6px 12px; border:1px solid var(--rule); background:var(--paper-dark);
+    cursor:pointer; color:var(--ink-soft);
+  }
+  .mark-btn.p.active{background:var(--present-bg); border-color:var(--present); color:var(--present); font-weight:600;}
+  .mark-btn.a.active{background:var(--absent-bg); border-color:var(--absent); color:var(--absent); font-weight:600;}
+
+  .stamp-note{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft);
+    margin-top:14px;
+  }
+
+  /* Student dashboard */
+  .stat-grid{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:6px;}
+  .stat-card{
+    flex:1; min-width:150px; padding:16px 0;
+    position:relative; background:transparent;
+    border-top:1px solid var(--rule);
+  }
+  .stat-card .big{
+    font-family:'Source Serif 4', serif; font-size:34px; font-weight:700; line-height:1;
+  }
+  .stat-card .lbl{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); margin-top:6px; text-transform:uppercase; letter-spacing:0.05em;}
+  .stat-card.warn .big{color:var(--absent);}
+  .stat-card.ok .big{color:var(--present);}
+
+  .stamp{
+    position:absolute; top:10px; right:10px;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:600;
+    letter-spacing:0.08em; text-transform:uppercase;
+    border:2px solid var(--stamp); color:var(--stamp);
+    padding:3px 7px; border-radius:3px; transform:rotate(6deg);
+    opacity:0.85;
+  }
+  .stamp.safe{border-color:var(--present); color:var(--present); transform:rotate(-4deg);}
+
+  .subject-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:11px 0; border-bottom:1px solid var(--rule);
+    font-size:14px;
+  }
+  .subject-row:last-child{border-bottom:none;}
+  .bar-bg{width:120px; height:8px; background:var(--paper-dark); position:relative; border:1px solid var(--rule);}
+  .bar-fill{height:100%; background:var(--present);}
+  .bar-fill.low{background:var(--absent);}
+  .pct-txt{font-family:'IBM Plex Mono', monospace; font-size:13px; width:48px; text-align:right;}
+
+  .history-item{
+    display:flex; justify-content:space-between; padding:7px 0;
+    border-bottom:1px dashed var(--rule); font-size:13px;
+  }
+  .history-item .status.p{color:var(--present); font-weight:600;}
+  .history-item .status.a{color:var(--absent); font-weight:600;}
+
+  .empty{color:var(--ink-soft); font-size:13px; font-style:italic; padding:10px 0;}
+
+  footer{
+    text-align:center; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    color:var(--ink-soft); padding:20px; border-top:1px solid var(--rule);
+  }
+  .brand h1{ position:relative; }
+  .brand h1::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-6px;
+    height:2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 11s cubic-bezier(0.45,0,0.15,1) infinite;
+    opacity:0.7;
+  }
+  @keyframes shimmer{
+    0%,100%{ background-position: 200% 0; }
+    50%{ background-position: -20% 0; }
+  }
+
+  .ledger-card, section.panel, .stat-card{
+    transition: opacity 0.6s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { transition:none !important; animation:none !important; }
+  }
+
+  .chip{
+    display:inline-block; font-family:'IBM Plex Mono', monospace; font-size:11px;
+    padding:3px 9px; border:1px solid var(--gold); color:var(--gold-bright);
+    margin-left:8px; letter-spacing:0.05em;
+  }
+  select[disabled], input[disabled]{ opacity:0.55; cursor:not-allowed; }
+  .hint{ color:var(--ink-soft); font-size:12px; margin:0 0 14px; }
+  .role-row{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--rule); font-size:14px; flex-wrap:wrap; gap:8px;}
+  .role-row:last-child{border-bottom:none;}
+  .role-row .tag{font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft);}
+  .sub-heading{font-family:'Source Serif 4', serif; font-size:15px; margin:22px 0 10px; padding-top:16px; border-top:1px dashed var(--rule);}
+  .sub-heading:first-child{margin-top:0; padding-top:0; border-top:none;}
+
+  /* ---- Per-page entrance animations ---- */
+  @keyframes pageFadeScale{
+    from{ opacity:0; transform:scale(0.985); }
+    to{ opacity:1; transform:scale(1); }
+  }
+  @keyframes pageSlideUp{
+    from{ opacity:0; transform:translateY(16px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes pageSlideRight{
+    from{ opacity:0; transform:translateX(-18px); }
+    to{ opacity:1; transform:translateX(0); }
+  }
+  @keyframes pageSlideLeft{
+    from{ opacity:0; transform:translateX(18px); }
+    to{ opacity:1; transform:translateX(0); }
+  }
+  #app.page-login{   animation: pageFadeScale 0.9s cubic-bezier(0.16,1,0.3,1) both; }
+  #app.page-student{ animation: pageSlideUp 0.85s cubic-bezier(0.16,1,0.3,1) both; }
+  #app.page-faculty{ animation: pageSlideRight 0.85s cubic-bezier(0.16,1,0.3,1) both; }
+  #app.page-admin{   animation: pageSlideLeft 0.85s cubic-bezier(0.16,1,0.3,1) both; }
+
+  /* ---- Lock-to-unlock animation on successful sign-in ---- */
+  .lock-wrap{ display:flex; justify-content:center; margin:2px 0 6px; color:var(--ink-soft); }
+  .lock-svg{ width:46px; height:46px; overflow:visible; }
+  .lock-shackle{
+    transform-box: fill-box;
+    transform-origin: 82% 100%;
+  }
+  .lock-body{ fill:currentColor; }
+  .lock-svg.unlocked .lock-shackle{
+    animation: unlockShackle 0.9s cubic-bezier(0.22,1,0.36,1) forwards;
+  }
+  .lock-svg.unlocked .lock-body{
+    animation: unlockBody 0.7s ease 0.75s forwards;
+  }
+  .lock-svg.unlocked .lock-check{
+    opacity:0;
+    animation: unlockCheck 0.6s cubic-bezier(0.16,1,0.3,1) 0.95s forwards;
+  }
+  @keyframes unlockShackle{
+    0%{ transform: rotate(0deg); }
+    100%{ transform: rotate(-32deg) translate(-2px,-3px); }
+  }
+  @keyframes unlockBody{
+    from{ fill:var(--ink-soft); }
+    to{ fill:var(--present); }
+  }
+  @keyframes unlockCheck{
+    from{ opacity:0; transform:scale(0.85); }
+    to{ opacity:1; transform:scale(1); }
+  }
+  .ledger-card.unlocking-out{
+    animation: cardUnlockOut 0.7s cubic-bezier(0.65,0,0.35,1) 0.6s forwards;
+    pointer-events:none;
+  }
+  @keyframes cardUnlockOut{
+    to{ opacity:0; transform:translateY(-8px); }
+  }
+</style>
+</head>
+<body>
+
+<div class="atmosphere" aria-hidden="true">
+  <div class="vignette"></div>
+  <span class="mote" style="left:6%;  animation-duration:28s; animation-delay:-2s;"></span>
+  <span class="mote" style="left:17%; animation-duration:33s; animation-delay:-9s;"></span>
+  <span class="mote" style="left:29%; animation-duration:25s; animation-delay:-5s;"></span>
+  <span class="mote" style="left:41%; animation-duration:36s; animation-delay:-13s;"></span>
+  <span class="mote" style="left:58%; animation-duration:29s; animation-delay:-1s;"></span>
+  <span class="mote" style="left:71%; animation-duration:32s; animation-delay:-16s;"></span>
+  <span class="mote" style="left:83%; animation-duration:26s; animation-delay:-7s;"></span>
+  <span class="mote" style="left:93%; animation-duration:35s; animation-delay:-11s;"></span>
+</div>
+
+<header class="app-header">
+  <div class="brand">
+    <h1>IMAYAM</h1>
+    <span class="num">ATTENDANCE PORTAL. DEPARTMENTAL</span>
+  </div>
+  <div class="session-info" id="sessionInfo"></div>
+</header>
+
+<main id="app"></main>
+
+<script type="module">
+/* ============ CLOUD DATABASE (Firebase Firestore) ============*/
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDjwZG7udSVQ5crHu5PrmYhBfNoA8tGiv4",
+  authDomain: "attendance-portal-f12d1.firebaseapp.com",
+  projectId: "attendance-portal-f12d1",
+  storageBucket: "attendance-portal-f12d1.firebasestorage.app",
+  messagingSenderId: "42078759566",
+  appId: "1:42078759566:web:223df1d4cdd6504e18b7df",
+  measurementId: "G-BW9RCK010G"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const registerDocRef = doc(db, "rollcall", "register");
+
+/* ============ DATA MODEL (in-memory mock — see chat for real backend) ============ */
+
+// Fixed academic years every department has. Change this if your program
+// isn't a 4-year course.
+const YEARS = [1, 2, 3, 4];
+
+// Total semesters across the whole course — 2 per year (Year 1 = Sem 1-2,
+// Year 2 = Sem 3-4, and so on up to Sem 8 in Year 4).
+const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8];
+function semestersForYear(year){ return [year * 2 - 1, year * 2]; }
+function yearForSemester(sem){ return Math.ceil(sem / 2); }
+
+// A department is just an id + display name. Add more from the Admin login.
+let DEPARTMENTS = [
+  { id: "CSE", name: "Computer Science and Engineering" },
+];
+
+// Subjects belong to one department, one year, AND one semester (1-8).
+let SUBJECTS = [
+  { id: "CCS371", name: "Video creation and editing", dept: "CSE", year: 1, semester: 1 },
+  { id: "CCS134", name: "Big data analysis", dept: "CSE", year: 2, semester: 3 },
+  { id: "MOC3064", name: "Disaster risk resource management", dept: "CSE", year: 2, semester: 4 },
+  { id: "AD3501", name: "Deep learning", dept: "CSE", year: 3, semester: 5 },
+  { id: "CW3551", name: "Data information and security", dept: "CSE", year: 3, semester: 6 },
+  { id: "C33551", name: "Distributed computing", dept: "CSE", year: 4, semester: 7 },
+  { id: "CCS431", name: "Data warehousing", dept: "CSE", year: 4, semester: 8 },
+];
+let subjectSeq = 1;
+
+// Students belong to one department AND one year.
+let STUDENTS = [
+  { id: "s1", roll: "21CS001", name: "THIRU CK", password: "thiruck", dept: "As& Ds", year: 3 },
+];
+let studentSeq = 2;
+
+// Faculty are scoped to ONE department and one-or-more years.
+// years.length > 1        -> a "head" faculty (runs the whole department,
+//                            sees/edits every year, can add subjects/faculty).
+// years.length === 1      -> a "year" faculty locked to a single year
+//                            (e.g. CSE1.1 only ever sees 1st-year CSE).
+// years.length === 1
+//   AND subject is set    -> "subject staff": locked to ONE subject inside
+//                            that year, can only mark/view attendance for
+//                            it (no roster editing, no adding subjects/staff).
+let FACULTY = [
+  { id: "CSE1",   name: "Prof. Iyer",   password: "CSE123",   dept: "CSE", years: [1,2,3,4] },
+  { id: "CSE1.1", name: "Prof. Meena",  password: "CSE1.1123",  dept: "CSE", years: [1] },
+  { id: "CSE1.2", name: "Prof. Karthik",password: "CSE1.2123",dept: "CSE", years: [2] },
+  { id: "CSE1.3", name: "Prof. Divya",  password: "CSE1.3123",  dept: "CSE", years: [3] },
+  { id: "CSE1.4", name: "Prof. Ravi",   password: "CSE1.4123",   dept: "CSE", years: [4] },
+  { id: "CSE-SUB1", name: "Mr. Anand", password: "CSE-SUB1123", dept: "CSE", years: [1], subject: "CCS371" },
+];
+
+// A single hardcoded super-admin who can create departments and department
+// heads. Change this password before going live.
+const ADMIN = { id: "admin", password: "admin123" };
+
+const THRESHOLD = 75; // minimum % required to avoid a shortage flag
+
+// attendanceLog: array of session records
+// { subjectId, date, marks: { studentId: 'P' | 'A' } }
+let attendanceLog = [
+  { subjectId:"CCS371", date:"2026-07-28", marks:{ s1:"P" } },
+  { subjectId:"CCS371", date:"2026-07-30", marks:{ s1:"A" } },
+];
+
+/* ---- department / faculty / subject / student helpers ---- */
+
+function addDepartment(id, name){
+  DEPARTMENTS.push({ id: id.trim().toUpperCase(), name: name.trim() });
+  persist();
+}
+
+function removeDepartment(deptId){
+  const deptSubjectIds = SUBJECTS.filter(s => s.dept === deptId).map(s => s.id);
+  SUBJECTS = SUBJECTS.filter(s => s.dept !== deptId);
+  STUDENTS = STUDENTS.filter(s => s.dept !== deptId);
+  FACULTY = FACULTY.filter(f => f.dept !== deptId);
+  attendanceLog = attendanceLog.filter(s => !deptSubjectIds.includes(s.subjectId));
+  DEPARTMENTS = DEPARTMENTS.filter(d => d.id !== deptId);
+  persist();
+}
+
+// subject is optional: when set, this faculty account is "subject staff" —
+// locked to a single subject within a single year, can only mark/view
+// attendance for that subject (no roster or subject/faculty management).
+function addFaculty(id, name, password, dept, years, subject){
+  FACULTY.push({ id: id.trim(), name: name.trim(), password, dept, years, subject: subject || null });
+  persist();
+}
+
+function removeFaculty(facultyId){
+  FACULTY = FACULTY.filter(f => f.id !== facultyId);
+  persist();
+}
+
+// Head-of-department control: reassign which year a Class Coordinator manages
+function updateFacultyYear(facultyId, year){
+  const f = FACULTY.find(x => x.id === facultyId);
+  if (!f || f.subject || f.years.length > 1) return; // only single-year CC accounts
+  f.years = [year];
+  persist();
+}
+
+function addSubject(name, dept, year, semester){
+  const id = "SUB" + (subjectSeq++);
+  SUBJECTS.push({ id, name: name.trim(), dept, year, semester: semester || (year * 2 - 1) });
+  persist();
+  return id;
+}
+
+function removeSubject(subjectId){
+  SUBJECTS = SUBJECTS.filter(s => s.id !== subjectId);
+  attendanceLog = attendanceLog.filter(s => s.subjectId !== subjectId);
+  persist();
+}
+
+function addStudent(roll, name, password, dept, year){
+  const id = "s" + (studentSeq++);
+  STUDENTS.push({ id, roll: roll.trim(), name: name.trim(), password, dept, year });
+  persist();
+  return id;
+}
+
+function removeStudent(studentId){
+  STUDENTS = STUDENTS.filter(s => s.id !== studentId);
+  // also strip their marks out of past sessions so summaries stay consistent
+  attendanceLog.forEach(session => { delete session.marks[studentId]; });
+  persist();
+}
+
+function subjectsForYear(dept, year){
+  return SUBJECTS.filter(s => s.dept === dept && s.year === year);
+}
+function studentsForYear(dept, year){
+  return STUDENTS.filter(s => s.dept === dept && s.year === year);
+}
+function subjectsForStudent(stu){
+  return subjectsForYear(stu.dept, stu.year);
+}
+function facultyForDept(dept){
+  return FACULTY.filter(f => f.dept === dept);
+}
+// Subjects a given faculty member is allowed to hand subject-staff duties out
+// for: heads get every subject across every year they run, year faculty get
+// only the subjects in their one year.
+function subjectsInScope(fac){
+  return fac.years.flatMap(y => subjectsForYear(fac.dept, y));
+}
+
+/* ============ STORAGE (persists to the cloud via Firestore) ============ */
+// Everything the register needs to rebuild itself lives in one document.
+// persist() pushes local changes up; the onSnapshot listener near the
+// bottom of this file pulls down changes from ANY device in real time.
+
+const DEFAULT_DEPARTMENTS = JSON.parse(JSON.stringify(DEPARTMENTS));
+const DEFAULT_SUBJECTS = JSON.parse(JSON.stringify(SUBJECTS));
+const DEFAULT_STUDENTS = JSON.parse(JSON.stringify(STUDENTS));
+const DEFAULT_FACULTY = JSON.parse(JSON.stringify(FACULTY));
+const DEFAULT_ATTENDANCE_LOG = JSON.parse(JSON.stringify(attendanceLog));
+const DEFAULT_STUDENT_SEQ = studentSeq;
+const DEFAULT_SUBJECT_SEQ = subjectSeq;
+
+async function persist(){
+  try{
+    await setDoc(registerDocRef, {
+      DEPARTMENTS, SUBJECTS, subjectSeq, STUDENTS, studentSeq, FACULTY, attendanceLog
+    });
+  }catch(e){
+    console.warn("Could not save attendance data to the cloud:", e);
+  }
+}
+
+function resetToDemoData(){
+  DEPARTMENTS = JSON.parse(JSON.stringify(DEFAULT_DEPARTMENTS));
+  SUBJECTS = JSON.parse(JSON.stringify(DEFAULT_SUBJECTS));
+  STUDENTS = JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
+  FACULTY = JSON.parse(JSON.stringify(DEFAULT_FACULTY));
+  attendanceLog = JSON.parse(JSON.stringify(DEFAULT_ATTENDANCE_LOG));
+  studentSeq = DEFAULT_STUDENT_SEQ;
+  subjectSeq = DEFAULT_SUBJECT_SEQ;
+  persist();
+}
+
+// Live sync: fires immediately with current cloud data, then again
+// every time ANY device writes a change. If the document doesn't exist
+// yet (first run for a brand new Firebase project), seed it with the
+// starter demo data so there's something for everyone to see.
+onSnapshot(registerDocRef, (snap) => {
+  if (snap.exists()){
+    const data = snap.data();
+    if (Array.isArray(data.DEPARTMENTS)) DEPARTMENTS = data.DEPARTMENTS;
+    if (Array.isArray(data.SUBJECTS)) SUBJECTS = data.SUBJECTS;
+    if (typeof data.subjectSeq === "number") subjectSeq = data.subjectSeq;
+    if (Array.isArray(data.STUDENTS)) STUDENTS = data.STUDENTS;
+    if (typeof data.studentSeq === "number") studentSeq = data.studentSeq;
+    if (Array.isArray(data.FACULTY)) FACULTY = data.FACULTY;
+    if (Array.isArray(data.attendanceLog)) attendanceLog = data.attendanceLog;
+  } else {
+    persist();
+  }
+  render();
+}, (err) => {
+  console.error("Realtime sync error:", err);
+  app.innerHTML = '<p class="empty">Could not connect to the cloud register. Check firebaseConfig and your internet connection.</p>';
+});
+
+/* ============ ALGORITHMS ============ */
+// See the chat response for pseudocode + complexity discussion of each of these.
+
+function sessionsForSubject(subjectId){
+  return attendanceLog.filter(s => s.subjectId === subjectId);
+}
+
+// Attendance % for one student in one subject
+function subjectPercentage(studentId, subjectId){
+  const sessions = sessionsForSubject(subjectId).filter(s => studentId in s.marks);
+  if (sessions.length === 0) return null;
+  const present = sessions.filter(s => s.marks[studentId] === "P").length;
+  return Math.round((present / sessions.length) * 1000) / 10;
+}
+
+// Overall % across all subjects for a student
+function overallPercentage(studentId){
+  let total = 0, present = 0;
+  attendanceLog.forEach(s => {
+    if (studentId in s.marks){
+      total++;
+      if (s.marks[studentId] === "P") present++;
+    }
+  });
+  if (total === 0) return null;
+  return Math.round((present / total) * 1000) / 10;
+}
+
+// List of subjects below threshold for a student, sorted worst-first
+// (only looks at subjects that belong to the student's own dept + year)
+function shortageSubjects(studentId){
+  const stu = STUDENTS.find(s => s.id === studentId);
+  if (!stu) return [];
+  return subjectsForStudent(stu)
+    .map(sub => ({ ...sub, pct: subjectPercentage(studentId, sub.id) }))
+    .filter(x => x.pct !== null && x.pct < THRESHOLD)
+    .sort((a,b) => a.pct - b.pct);
+}
+
+function markAttendance(subjectId, date, marks){
+  const existing = attendanceLog.find(s => s.subjectId === subjectId && s.date === date);
+  if (existing){ existing.marks = marks; }
+  else { attendanceLog.push({ subjectId, date, marks }); }
+  persist();
+}
+
+// Present / absent / total session counts for one student in one subject
+function subjectCounts(studentId, subjectId){
+  const sessions = sessionsForSubject(subjectId).filter(s => studentId in s.marks);
+  const present = sessions.filter(s => s.marks[studentId] === "P").length;
+  return { present, absent: sessions.length - present, total: sessions.length };
+}
+
+// Present / absent / total counts across ALL subjects for one student
+function overallCounts(studentId){
+  let present = 0, total = 0;
+  attendanceLog.forEach(s => {
+    if (studentId in s.marks){ total++; if (s.marks[studentId] === "P") present++; }
+  });
+  return { present, absent: total - present, total };
+}
+
+// Whole-class attendance % for one subject: total present marks over total
+// marks taken across every student in the roster (not an average of averages)
+function classPercentage(subjectId, studentIds){
+  let present = 0, total = 0;
+  sessionsForSubject(subjectId).forEach(s => {
+    studentIds.forEach(id => {
+      if (id in s.marks){ total++; if (s.marks[id] === "P") present++; }
+    });
+  });
+  if (total === 0) return null;
+  return Math.round((present / total) * 1000) / 10;
+}
+
+// Whole-department attendance %: total present marks over total marks taken
+// across every subject and every student belonging to that department
+function deptPercentage(deptId){
+  let present = 0, total = 0;
+  attendanceLog.forEach(s => {
+    const sub = SUBJECTS.find(x => x.id === s.subjectId);
+    if (!sub || sub.dept !== deptId) return;
+    Object.keys(s.marks).forEach(stId => {
+      const stu = STUDENTS.find(x => x.id === stId);
+      if (!stu || stu.dept !== deptId) return;
+      total++;
+      if (s.marks[stId] === "P") present++;
+    });
+  });
+  if (total === 0) return null;
+  return Math.round((present / total) * 1000) / 10;
+}
+
+/* ---- CSV export (opens directly in Excel, Google Sheets, Numbers, etc.) ---- */
+
+function toCSV(rows){
+  return rows.map(row => row.map(cell => {
+    const s = String(cell ?? "");
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }).join(",")).join("\r\n");
+}
+
+function downloadCSV(filename, rows){
+  const csv = toCSV(rows);
+  // Leading BOM so Excel opens UTF-8 correctly instead of mangling accents
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ============ APP STATE + RENDER ============ */
+
+let state = { screen:"login", role:"student", userId:null, draftMarks:{}, selSubject:null, selYear:null, selDate: new Date().toISOString().slice(0,10), activeSection:null };
+
+const app = document.getElementById("app");
+app.innerHTML = '<p class="empty">Connecting to the shared register…</p>';
+const sessionInfo = document.getElementById("sessionInfo");
+
+function render(){
+  sessionInfo.textContent = new Date().toLocaleDateString('en-IN', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+
+  // Each screen gets its own entrance animation (see #app.page-* in <style>).
+  // Removing + re-adding the class (with a forced reflow in between) makes
+  // the animation replay every time, not just the first time the class is set.
+  const pageClass = state.screen === "login" ? "page-login"
+    : state.role === "admin" ? "page-admin"
+    : state.role === "faculty" ? "page-faculty"
+    : "page-student";
+  app.classList.remove("page-login", "page-student", "page-faculty", "page-admin");
+  void app.offsetWidth; // force reflow so the browser notices the class changed
+  app.classList.add(pageClass);
+
+  if (state.screen === "login"){ renderLogin(); return; }
+  if (state.role === "admin") renderAdmin();
+  else if (state.role === "faculty") renderFaculty();
+  else renderStudent();
+  applySectionFilter();
+}
+
+// After a dashboard render has built the full page, this collapses it down to
+// just the section headings (a menu) until the user picks one. Picking a
+// heading shows only that section (with a way back to the menu). This runs
+// generically over whatever <section class="panel"> elements the current
+// role's render function produced, so it works for student/faculty/admin
+// without needing to know their contents.
+// Fades + slides an element in from a freshly-inserted state. Called on
+// whatever just became the "active" view (the menu, or the open section) so
+// switching between them feels like a smooth transition instead of an
+// instant swap.
+function fadeInEl(el, delay){
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(8px)';
+  el.style.transition = 'none';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.style.transition = `opacity 0.32s cubic-bezier(0.16,1,0.3,1) ${delay || 0}s, transform 0.32s cubic-bezier(0.16,1,0.3,1) ${delay || 0}s`;
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    });
+  });
+}
+
+function applySectionFilter(){
+  const container = document.getElementById('app');
+  if (!container) return;
+  const sections = Array.from(container.querySelectorAll(':scope > section.panel'));
+  if (sections.length === 0) return;
+
+  const oldMenu = container.querySelector('#sectionMenu');
+  if (oldMenu) oldMenu.remove();
+  const oldBack = container.querySelector('#backToMenuBtn');
+  if (oldBack) oldBack.remove();
+
+  const statGrid = container.querySelector(':scope > .stat-grid');
+  const toolbar = container.querySelector(':scope > .toolbar');
+
+  if (state.activeSection == null || state.activeSection >= sections.length){
+    const menu = document.createElement('div');
+    menu.id = 'sectionMenu';
+    menu.className = 'section-menu';
+    menu.style.display = 'flex';
+    menu.style.flexDirection = 'column';
+    menu.style.gap = '10px';
+    menu.style.marginTop = '10px';
+    sections.forEach((sec, i) => {
+      const h3 = sec.querySelector('.panel-head h3');
+      const title = h3 ? h3.textContent : `Section ${i + 1}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn secondary menu-item';
+      btn.textContent = title;
+      btn.style.width = '100%';
+      btn.style.textAlign = 'left';
+      btn.style.marginTop = '0';
+      btn.onclick = () => { state.activeSection = i; render(); };
+      menu.appendChild(btn);
+    });
+    if (toolbar) toolbar.after(menu); else container.prepend(menu);
+    sections.forEach(sec => { sec.style.display = 'none'; });
+    if (statGrid) statGrid.style.display = 'none';
+    fadeInEl(menu);
+  } else {
+    sections.forEach((sec, i) => { sec.style.display = (i === state.activeSection) ? '' : 'none'; });
+    if (statGrid) statGrid.style.display = '';
+
+    const backBtn = document.createElement('button');
+    backBtn.id = 'backToMenuBtn';
+    backBtn.type = 'button';
+    backBtn.className = 'btn secondary small';
+    backBtn.textContent = '← Back to menu';
+    backBtn.style.marginTop = '10px';
+    backBtn.style.marginBottom = '4px';
+    backBtn.style.display = 'block';
+    backBtn.onclick = () => { state.activeSection = null; render(); };
+    if (toolbar) toolbar.after(backBtn); else container.prepend(backBtn);
+
+    fadeInEl(backBtn);
+    const activeSec = sections[state.activeSection];
+    if (activeSec) fadeInEl(activeSec, 0.05);
+  }
+}
+
+function renderLogin(){
+  const idLabel = 'User ID';
+  const idPlaceholder = 'User ID';
+  app.innerHTML = `
+    <div class="login-wrap">
+      <div class="ledger-card">
+        <div class="lock-wrap">
+          <svg class="lock-svg" id="lockIcon" viewBox="0 0 24 24">
+            <path class="lock-shackle" d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <rect class="lock-body" x="4.5" y="10" width="15" height="10" rx="2.2"/>
+            <path class="lock-check" d="M8.5 15l2 2 4.5-4.5" fill="none" stroke="var(--paper)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2>Login</h2>
+        <div class="role-toggle">
+          <button data-role="student" class="${state.role==='student'?'active':''}">Student</button>
+          <button data-role="faculty" class="${state.role==='faculty'?'active':''}">Faculty</button>
+          <button data-role="admin" class="${state.role==='admin'?'active':''}">Admin</button>
+        </div>
+        <label for="idInput">${idLabel}</label>
+        <input type="text" id="idInput" placeholder="${idPlaceholder}">
+        <label for="pwInput">Password</label>
+        <div class="pw-field">
+          <input type="password" id="pwInput" placeholder="Password">
+          <button type="button" class="pw-toggle" id="pwToggle" aria-label="Show password">
+            <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path class="eye-open" d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/>
+              <circle class="eye-open" cx="12" cy="12" r="3.2"/>
+              <path class="eye-closed" d="M3 3l18 18"/>
+              <path class="eye-closed" d="M10.6 5.2A10.6 10.6 0 0 1 12 5c7 0 10.5 7 10.5 7a17.7 17.7 0 0 1-3.15 4.15M6.6 6.6C3.6 8.4 1.5 12 1.5 12S5 19 12 19c1.4 0 2.65-.28 3.75-.73M9.9 9.9a3.2 3.2 0 0 0 4.2 4.2"/>
+            </svg>
+          </button>
+        </div>
+        <button class="btn" id="loginBtn">Login</button>
+        <div class="error-msg" id="loginErr"></div>
+      </div>
+    </div>
+  `;
+  app.querySelectorAll('.role-toggle button').forEach(b=>{
+    b.onclick = () => { state.role = b.dataset.role; render(); };
+  });
+  const playUnlockAndEnter = () => {
+    const icon = document.getElementById('lockIcon');
+    const card = document.querySelector('.ledger-card');
+    const btn = document.getElementById('loginBtn');
+    if (btn) btn.disabled = true;
+    if (icon) icon.classList.add('unlocked');
+    if (card) card.classList.add('unlocking-out');
+    setTimeout(() => { state.screen = "dashboard"; render(); }, 1300);
+  };
+
+  const tryLogin = () => {
+    const idVal = document.getElementById('idInput').value.trim();
+    const pwVal = document.getElementById('pwInput').value;
+    const errEl = document.getElementById('loginErr');
+
+    if (state.role === 'admin'){
+      if (idVal.toLowerCase() !== ADMIN.id.toLowerCase() || pwVal !== ADMIN.password){
+        errEl.textContent = "ID or password not recognized.";
+        return;
+      }
+      state.userId = ADMIN.id;
+      playUnlockAndEnter();
+      return;
+    }
+
+    const roster = state.role === 'faculty' ? FACULTY : STUDENTS;
+    const match = state.role === 'faculty'
+      ? roster.find(u => u.id.toLowerCase() === idVal.toLowerCase())
+      : roster.find(u => u.roll.toLowerCase() === idVal.toLowerCase());
+    if (!match || match.password !== pwVal){
+      errEl.textContent = "ID or password not recognized.";
+      return;
+    }
+    state.userId = match.id;
+    if (state.role === 'faculty') state.selYear = match.years[0];
+    playUnlockAndEnter();
+  };
+  document.getElementById('loginBtn').onclick = tryLogin;
+  document.getElementById('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+  const pwToggle = document.getElementById('pwToggle');
+  const pwInputEl = document.getElementById('pwInput');
+  if (pwToggle && pwInputEl){
+    pwToggle.onclick = () => {
+      const showing = pwInputEl.type === 'text';
+      pwInputEl.type = showing ? 'password' : 'text';
+      pwToggle.classList.toggle('showing', !showing);
+      pwToggle.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+    };
+  }
+}
+
+function renderFaculty(){
+  const fac = FACULTY.find(f => f.id === state.userId);
+  if (!fac){ doLogout(); return; }
+  const isSubjectStaff = !!fac.subject;
+  const isHead = !isSubjectStaff && fac.years.length > 1;
+  // Class Coordinator: locked to one year, not a subject-staff account.
+  // CCs take roll call, manage the roster, and add subjects/subject staff.
+  const isCC = !isHead && !isSubjectStaff;
+
+  if (isSubjectStaff){
+    // locked to exactly one year and one subject — no picking allowed
+    state.selYear = fac.years[0];
+    state.selSubject = fac.subject;
+  } else if (!state.selYear || !fac.years.includes(state.selYear)){
+    state.selYear = fac.years[0];
+  }
+
+  const deptName = (DEPARTMENTS.find(d => d.id === fac.dept) || {}).name || fac.dept;
+  const yearSubjects = subjectsForYear(fac.dept, state.selYear);
+  const yearStudents = studentsForYear(fac.dept, state.selYear);
+
+  if (isSubjectStaff){
+    if (!yearSubjects.some(s => s.id === state.selSubject)) state.selSubject = null;
+  } else if (!state.selSubject || !yearSubjects.some(s => s.id === state.selSubject)){
+    state.selSubject = yearSubjects.length ? yearSubjects[0].id : null;
+  }
+  const subject = yearSubjects.find(s => s.id === state.selSubject) || null;
+  const existing = subject ? attendanceLog.find(s => s.subjectId === state.selSubject && s.date === state.selDate) : null;
+
+  // seed draft marks from existing session, or default all present
+  const draftKey = state.selYear + "|" + state.selSubject + "|" + state.selDate;
+  if (!state._draftKey || state._draftKey !== draftKey){
+    state.draftMarks = {};
+    yearStudents.forEach(st => { state.draftMarks[st.id] = existing ? (existing.marks[st.id] || "P") : "P"; });
+    state._draftKey = draftKey;
+  }
+
+  const presentCount = Object.values(state.draftMarks).filter(v=>v==="P").length;
+
+  app.innerHTML = `
+    <div class="toolbar">
+      <span class="who">Signed in as <b>${fac.name}</b> (${isHead ? 'Head of dept' : (isSubjectStaff ? 'Subject staff' : 'Class Coordinator (CC)')}) — ${deptName}<span class="chip">${fac.id}</span></span>
+      <button class="btn secondary small" id="logoutBtn">Sign out</button>
+    </div>
+
+    ${!isHead ? `
+    <section class="panel">
+      <div class="panel-head"><h3>Attendance</h3></div>
+      <div class="panel-body">
+        <div class="field-row">
+          <div>
+            <label>Year</label>
+            <input type="text" value="Year ${state.selYear}" disabled>
+          </div>
+          <div>
+            <label>Subject</label>
+            ${isSubjectStaff
+              ? `<input type="text" value="${subject ? subject.name : 'Subject removed'}" disabled>`
+              : (yearSubjects.length
+                ? `<select id="subjSel">${yearSubjects.map(s=>`<option value="${s.id}" ${s.id===state.selSubject?'selected':''}>${s.name}</option>`).join('')}</select>`
+                : `<input type="text" value="No subjects yet" disabled>`)}
+          </div>
+          <div>
+            <label>Session date</label>
+            <input type="date" id="dateSel" value="${state.selDate}">
+          </div>
+        </div>
+
+        ${!subject ? `<p class="empty">No subjects have been added for Year ${state.selYear} yet.${isCC ? ' Add one below.' : ' Ask your Class Coordinator to add one.'}</p>` : `
+        <table class="roll" style="margin-top:20px;">
+          <thead><tr><th>Roll No.</th><th>Name</th><th>Status</th></tr></thead>
+          <tbody>
+            ${yearStudents.length === 0 ? `<tr><td colspan="3" class="empty">No students in Year ${state.selYear} yet.</td></tr>` :
+              yearStudents.map(st => `
+              <tr>
+                <td class="roll-num">${st.roll}</td>
+                <td>${st.name}</td>
+                <td>
+                  <div class="mark-toggle" data-student="${st.id}">
+                    <button class="mark-btn p ${state.draftMarks[st.id]==='P'?'active':''}" data-val="P">Present</button>
+                    <button class="mark-btn a ${state.draftMarks[st.id]==='A'?'active':''}" data-val="A">Absent</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p class="stamp-note">${presentCount} of ${yearStudents.length} marked present for ${subject.name} on ${state.selDate}${existing ? ' · editing a saved session' : ' · new session'}</p>
+        <button class="btn" id="saveBtn" ${yearStudents.length===0?'disabled':''}>Save roll call</button>
+        `}
+      </div>
+    </section>` : ''}
+
+    ${isCC ? `
+    <section class="panel">
+      <div class="panel-head"><h3>Manage roster — Year ${state.selYear}</h3></div>
+      <div class="panel-body">
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label>Roll number</label>
+            <input type="text" id="newRoll" placeholder="21CS007">
+          </div>
+          <div>
+            <label>Full name</label>
+            <input type="text" id="newName" placeholder="Student name">
+          </div>
+          <div>
+            <label>Initial password</label>
+            <input type="text" id="newPw" placeholder="e.g. roll number">
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="btn" id="addStudentBtn" style="margin-top:0;">Add student</button>
+          </div>
+        </div>
+        <div id="addErr" class="error-msg"></div>
+
+        <table class="roll" style="margin-top:20px;">
+          <thead><tr><th>Roll No.</th><th>Name</th><th>Password</th><th></th></tr></thead>
+          <tbody>
+            ${yearStudents.length === 0 ? `<tr><td colspan="4" class="empty">No students yet.</td></tr>` :
+              yearStudents.map(st => `
+              <tr>
+                <td class="roll-num">${st.roll}</td>
+                <td>${st.name}</td>
+                <td class="roll-num">${st.password}</td>
+                <td><button class="btn secondary small" data-remove="${st.id}">Remove</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>` : ''}
+
+    ${(subject && !isHead) ? (() => {
+      const clsPct = classPercentage(state.selSubject, yearStudents.map(s=>s.id));
+      return `
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Class summary — ${subject.name}</h3>
+        <span style="display:flex; align-items:center; gap:10px;">
+          <span class="chip">Class attendance: ${clsPct === null ? '—' : clsPct + '%'}</span>
+          ${(isCC && yearStudents.length) ? `<button class="btn secondary small" id="downloadClassBtn">Download (Excel/Sheets)</button>` : ''}
+        </span>
+      </div>
+      <div class="panel-body">
+        ${yearStudents.length === 0 ? '<p class="empty">No students yet.</p>' : yearStudents.map(st => {
+          const { present, absent, total } = subjectCounts(st.id, state.selSubject);
+          const pct = subjectPercentage(st.id, state.selSubject);
+          const low = pct !== null && pct < THRESHOLD;
+          return `
+            <div class="subject-row">
+              <span>${st.roll} — ${st.name}</span>
+              <span style="display:flex; align-items:center; gap:10px;">
+                <span class="tag">P ${present} · A ${absent} / ${total}</span>
+                <span class="bar-bg"><span class="bar-fill ${low?'low':''}" style="width:${pct ?? 0}%"></span></span>
+                <span class="pct-txt">${pct === null ? '—' : pct + '%'}</span>
+              </span>
+            </div>`;
+        }).join('')}
+      </div>
+    </section>`;
+    })() : ''}
+
+    ${isCC ? `
+    <section class="panel">
+      <div class="panel-head"><h3>Add subject — Year ${state.selYear}</h3></div>
+      <div class="panel-body">
+        <p class="hint">New subjects you add here only show up for Year ${state.selYear}.</p>
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label>Subject name</label>
+            <input type="text" id="newSubjName" placeholder="e.g. Operating Systems">
+          </div>
+          <div>
+            <label>Semester</label>
+            <select id="newSubjSemester">${semestersForYear(fac.years[0]).map(sem=>`<option value="${sem}">Semester ${sem}</option>`).join('')}</select>
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="btn" id="addSubjectBtn" style="margin-top:0;">Add subject</button>
+          </div>
+        </div>
+        <div id="subjErr" class="error-msg"></div>
+
+        ${(() => {
+          const subs = subjectsForYear(fac.dept, state.selYear);
+          return subs.length === 0 ? '<p class="empty">No subjects yet.</p>' :
+            subs.map(s => `<div class="role-row"><span>${s.name} <span class="tag">${s.id} · Sem ${s.semester ?? (state.selYear*2-1)}</span></span><button class="btn secondary small" data-remove-subject="${s.id}">Remove</button></div>`).join('');
+        })()}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Add subject staff — Year ${state.selYear}</h3></div>
+      <div class="panel-body">
+        <p class="hint">Subject staff can only mark and view attendance (present/absent) for the one subject you assign them — no roster access, no adding subjects or other staff.</p>
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label>Staff ID</label>
+            <input type="text" id="newSubStaffId" placeholder="e.g. ${fac.dept}${state.selYear}-SUB1">
+          </div>
+          <div>
+            <label>Full name</label>
+            <input type="text" id="newSubStaffName" placeholder="Staff name">
+          </div>
+          <div>
+            <label>Password</label>
+            <input type="text" id="newSubStaffPw" placeholder="Password">
+          </div>
+          <div>
+            <label>Subject</label>
+            ${subjectsInScope(fac).length
+              ? `<select id="newSubStaffSubj">${subjectsInScope(fac).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>`
+              : `<input type="text" value="No subjects yet" disabled>`}
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="btn" id="addSubStaffBtn" style="margin-top:0;" ${subjectsInScope(fac).length?'':'disabled'}>Add subject staff</button>
+          </div>
+        </div>
+        <div id="subStaffErr" class="error-msg"></div>
+
+        <div class="sub-heading">Subject staff you manage</div>
+        ${(() => {
+          const inScopeIds = subjectsInScope(fac).map(s=>s.id);
+          const list = FACULTY.filter(f => f.subject && inScopeIds.includes(f.subject));
+          if (list.length === 0) return '<p class="empty">No subject staff added yet.</p>';
+          return list.map(f => {
+            const sub = SUBJECTS.find(s=>s.id===f.subject);
+            return `<div class="role-row"><span>${f.name} <span class="tag">${f.id} · ${sub ? sub.name : f.subject}</span></span><button class="btn secondary small" data-remove-faculty="${f.id}">Remove</button></div>`;
+          }).join('');
+        })()}
+      </div>
+    </section>` : ''}
+
+    ${isHead ? `
+    <section class="panel">
+      <div class="panel-head"><h3>Add Class Coordinator (CC) — ${deptName}</h3></div>
+      <div class="panel-body">
+        <p class="hint">A Class Coordinator is locked to a single year of ${deptName}, signs in with their own staff ID and password, and can take roll call, manage the roster, and add subjects/subject staff for that year.</p>
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label>Staff ID</label>
+            <input type="text" id="newFacId" placeholder="e.g. ${fac.dept}1.1">
+          </div>
+          <div>
+            <label>Full name</label>
+            <input type="text" id="newFacName" placeholder="Coordinator name">
+          </div>
+          <div>
+            <label>Password</label>
+            <input type="text" id="newFacPw" placeholder="Password">
+          </div>
+          <div>
+            <label>Year they manage</label>
+            <select id="newFacYear">${fac.years.map(y=>`<option value="${y}">Year ${y}</option>`).join('')}</select>
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="btn" id="addFacultyBtn" style="margin-top:0;">Add CC</button>
+          </div>
+        </div>
+        <div id="facErr" class="error-msg"></div>
+
+        <div class="sub-heading">Class Coordinators in ${deptName}</div>
+        ${facultyForDept(fac.dept).filter(f => !f.subject && f.years.length === 1).length === 0
+          ? '<p class="empty">No Class Coordinators added yet.</p>'
+          : facultyForDept(fac.dept).filter(f => !f.subject && f.years.length === 1).map(f => `
+          <div class="role-row">
+            <span>${f.name} <span class="tag">${f.id}</span></span>
+            <span style="display:flex; align-items:center; gap:8px;">
+              <select data-cc-year="${f.id}">${fac.years.map(y=>`<option value="${y}" ${y===f.years[0]?'selected':''}>Year ${y}</option>`).join('')}</select>
+              <button class="btn secondary small" data-remove-faculty="${f.id}">Remove</button>
+            </span>
+          </div>`).join('')}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Overall class attendance — ${deptName}</h3>
+        <span class="chip">Department average: ${(() => { const p = deptPercentage(fac.dept); return p === null ? '—' : p + '%'; })()}</span>
+      </div>
+      <div class="panel-body">
+        ${(() => {
+          const yearsWithSubjects = fac.years.filter(y => subjectsForYear(fac.dept, y).length > 0);
+          if (yearsWithSubjects.length === 0) return '<p class="empty">No subjects added yet.</p>';
+          return yearsWithSubjects.map(y => {
+            const subs = subjectsForYear(fac.dept, y);
+            const studentIds = studentsForYear(fac.dept, y).map(s => s.id);
+            return `<div class="sub-heading">Year ${y}</div>` + subs.map(sub => {
+              const pct = classPercentage(sub.id, studentIds);
+              const low = pct !== null && pct < THRESHOLD;
+              return `
+                <div class="subject-row">
+                  <span>${sub.name}</span>
+                  <span style="display:flex; align-items:center; gap:10px;">
+                    <span class="bar-bg"><span class="bar-fill ${low?'low':''}" style="width:${pct ?? 0}%"></span></span>
+                    <span class="pct-txt">${pct === null ? '—' : pct + '%'}</span>
+                  </span>
+                </div>`;
+            }).join('');
+          }).join('');
+        })()}
+      </div>
+    </section>` : ''}
+  `;
+
+  document.getElementById('logoutBtn').onclick = doLogout;
+  if (document.getElementById('subjSel')){
+    document.getElementById('subjSel').onchange = (e)=>{ state.selSubject = e.target.value; state._draftKey=null; render(); };
+  }
+  if (document.getElementById('dateSel')){
+    document.getElementById('dateSel').onchange = (e)=>{ state.selDate = e.target.value; state._draftKey=null; render(); };
+  }
+  app.querySelectorAll('.mark-toggle').forEach(tg => {
+    tg.querySelectorAll('.mark-btn').forEach(btn => {
+      btn.onclick = () => {
+        state.draftMarks[tg.dataset.student] = btn.dataset.val;
+        render();
+      };
+    });
+  });
+  if (document.getElementById('saveBtn')){
+    document.getElementById('saveBtn').onclick = () => {
+      markAttendance(state.selSubject, state.selDate, {...state.draftMarks});
+      render();
+    };
+  }
+
+  if (document.getElementById('downloadClassBtn')){
+    document.getElementById('downloadClassBtn').onclick = () => {
+      const rows = [["Roll No.", "Name", "Present", "Absent", "Total Sessions", "Attendance %"]];
+      yearStudents.forEach(st => {
+        const { present, absent, total } = subjectCounts(st.id, state.selSubject);
+        const pct = subjectPercentage(st.id, state.selSubject);
+        rows.push([st.roll, st.name, present, absent, total, pct === null ? "" : pct]);
+      });
+      const clsPct = classPercentage(state.selSubject, yearStudents.map(s=>s.id));
+      rows.push([]);
+      rows.push(["Class attendance %", clsPct === null ? "" : clsPct]);
+      downloadCSV(`${subject.name.replace(/[^\w\-]+/g,'_')}_Year${state.selYear}_attendance.csv`, rows);
+    };
+  }
+
+  if (document.getElementById('addStudentBtn')){
+    document.getElementById('addStudentBtn').onclick = () => {
+      const roll = document.getElementById('newRoll').value.trim();
+      const name = document.getElementById('newName').value.trim();
+      const password = document.getElementById('newPw').value.trim() || roll; // default password = roll number if left blank
+      const errEl = document.getElementById('addErr');
+      if (!roll || !name){
+        errEl.textContent = "Enter both a roll number and a name.";
+        return;
+      }
+      if (STUDENTS.some(s => s.roll.toLowerCase() === roll.toLowerCase())){
+        errEl.textContent = "That roll number is already on the roster.";
+        return;
+      }
+      addStudent(roll, name, password, fac.dept, state.selYear);
+      state._draftKey = null; // force draft marks to reseed and include the new student
+      render();
+    };
+  }
+
+  app.querySelectorAll('[data-remove]').forEach(btn => {
+    btn.onclick = () => {
+      if (!confirm("Remove this student from the roster? Their past attendance marks will be cleared too.")) return;
+      removeStudent(btn.dataset.remove);
+      state._draftKey = null;
+      render();
+    };
+  });
+
+  if (document.getElementById('addSubjectBtn')){
+    document.getElementById('addSubjectBtn').onclick = () => {
+      const name = document.getElementById('newSubjName').value.trim();
+      const semEl = document.getElementById('newSubjSemester');
+      const semester = semEl ? Number(semEl.value) : (fac.years[0] * 2 - 1);
+      const year = yearForSemester(semester);
+      const errEl = document.getElementById('subjErr');
+      if (!name){ errEl.textContent = "Enter a subject name."; return; }
+      addSubject(name, fac.dept, year, semester);
+      render();
+    };
+  }
+  app.querySelectorAll('[data-remove-subject]').forEach(btn => {
+    btn.onclick = () => {
+      if (!confirm("Remove this subject? Its attendance history will be cleared too.")) return;
+      removeSubject(btn.dataset.removeSubject);
+      state.selSubject = null;
+      state._draftKey = null;
+      render();
+    };
+  });
+
+  if (document.getElementById('addSubStaffBtn')){
+    document.getElementById('addSubStaffBtn').onclick = () => {
+      const id = document.getElementById('newSubStaffId').value.trim();
+      const name = document.getElementById('newSubStaffName').value.trim();
+      const password = document.getElementById('newSubStaffPw').value.trim();
+      const subjEl = document.getElementById('newSubStaffSubj');
+      const errEl = document.getElementById('subStaffErr');
+      if (!id || !name || !password || !subjEl){ errEl.textContent = "Fill in staff ID, name, and password."; return; }
+      if (FACULTY.some(f => f.id.toLowerCase() === id.toLowerCase())){ errEl.textContent = "That staff ID is already in use."; return; }
+      const chosenSubject = SUBJECTS.find(s => s.id === subjEl.value);
+      if (!chosenSubject){ errEl.textContent = "Pick a subject."; return; }
+      addFaculty(id, name, password, fac.dept, [chosenSubject.year], chosenSubject.id);
+      render();
+    };
+  }
+
+  if (isHead){
+    document.getElementById('addFacultyBtn').onclick = () => {
+      const id = document.getElementById('newFacId').value.trim();
+      const name = document.getElementById('newFacName').value.trim();
+      const password = document.getElementById('newFacPw').value.trim();
+      const year = Number(document.getElementById('newFacYear').value);
+      const errEl = document.getElementById('facErr');
+      if (!id || !name || !password){ errEl.textContent = "Fill in staff ID, name, and password."; return; }
+      if (FACULTY.some(f => f.id.toLowerCase() === id.toLowerCase())){ errEl.textContent = "That staff ID is already in use."; return; }
+      addFaculty(id, name, password, fac.dept, [year]);
+      render();
+    };
+  }
+
+  app.querySelectorAll('[data-cc-year]').forEach(sel => {
+    sel.onchange = () => {
+      updateFacultyYear(sel.dataset.ccYear, Number(sel.value));
+      render();
+    };
+  });
+
+  app.querySelectorAll('[data-remove-faculty]').forEach(btn => {
+    btn.onclick = () => {
+      if (!confirm("Remove this account?")) return;
+      removeFaculty(btn.dataset.removeFaculty);
+      render();
+    };
+  });
+}
+
+function renderStudent(){
+  const stu = STUDENTS.find(s => s.id === state.userId);
+  if (!stu){ doLogout(); return; }
+  const deptName = (DEPARTMENTS.find(d => d.id === stu.dept) || {}).name || stu.dept;
+  const mySubjects = subjectsForStudent(stu);
+  const overall = overallPercentage(stu.id);
+  const shortages = shortageSubjects(stu.id);
+  const isLow = overall !== null && overall < THRESHOLD;
+
+  const history = attendanceLog
+    .filter(s => stu.id in s.marks)
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  app.innerHTML = `
+    <div class="toolbar">
+      <span class="who">Signed in as <b>${stu.name}</b> (${stu.roll}) — ${deptName}, Year ${stu.year}</span>
+      <button class="btn secondary small" id="logoutBtn">Sign out</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card ${overall===null?'':(isLow?'warn':'ok')}">
+        ${overall!==null ? `<span class="stamp ${isLow?'':'safe'}">${isLow?'Shortage':'In order'}</span>` : ''}
+        <div class="big">${overall === null ? '—' : overall + '%'}</div>
+        <div class="lbl">Overall attendance</div>
+      </div>
+      <div class="stat-card">
+        <div class="big">${history.length}</div>
+        <div class="lbl">Sessions recorded</div>
+      </div>
+      <div class="stat-card ${shortages.length ? 'warn' : 'ok'}">
+        <div class="big">${shortages.length}</div>
+        <div class="lbl">Subjects below ${THRESHOLD}%</div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h3>By subject</h3>
+        ${mySubjects.length ? `<button class="btn secondary small" id="downloadSubjectsBtn">Download (Excel/Sheets)</button>` : ''}
+      </div>
+      <div class="panel-body">
+        ${mySubjects.length === 0 ? '<p class="empty">No subjects assigned yet.</p>' : mySubjects.map(sub => {
+          const { present, absent, total } = subjectCounts(stu.id, sub.id);
+          const pct = subjectPercentage(stu.id, sub.id);
+          const low = pct !== null && pct < THRESHOLD;
+          return `
+            <div class="subject-row">
+              <span>${sub.name}</span>
+              <span style="display:flex; align-items:center; gap:10px;">
+                <span class="tag">P ${present} · A ${absent} / ${total}</span>
+                <span class="bar-bg"><span class="bar-fill ${low?'low':''}" style="width:${pct ?? 0}%"></span></span>
+                <span class="pct-txt">${pct === null ? '—' : pct + '%'}</span>
+              </span>
+            </div>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Session history</h3>
+        ${history.length ? `<button class="btn secondary small" id="downloadHistoryBtn">Download (Excel/Sheets)</button>` : ''}
+      </div>
+      <div class="panel-body">
+        ${history.length === 0 ? '<p class="empty">No sessions recorded yet.</p>' :
+          history.map(s => {
+            const sub = SUBJECTS.find(x=>x.id===s.subjectId);
+            const mark = s.marks[stu.id];
+            return `<div class="history-item">
+              <span>${s.date} — ${sub ? sub.name : s.subjectId}</span>
+              <span class="status ${mark==='P'?'p':'a'}">${mark==='P'?'Present':'Absent'}</span>
+            </div>`;
+          }).join('')
+        }
+      </div>
+    </section>
+  `;
+  document.getElementById('logoutBtn').onclick = doLogout;
+
+  if (document.getElementById('downloadSubjectsBtn')){
+    document.getElementById('downloadSubjectsBtn').onclick = () => {
+      const rows = [["Subject", "Present", "Absent", "Total Sessions", "Attendance %"]];
+      mySubjects.forEach(sub => {
+        const { present, absent, total } = subjectCounts(stu.id, sub.id);
+        const pct = subjectPercentage(stu.id, sub.id);
+        rows.push([sub.name, present, absent, total, pct === null ? "" : pct]);
+      });
+      rows.push([]);
+      rows.push(["Overall attendance %", overall === null ? "" : overall]);
+      downloadCSV(`${stu.roll}_subject_attendance.csv`, rows);
+    };
+  }
+
+  if (document.getElementById('downloadHistoryBtn')){
+    document.getElementById('downloadHistoryBtn').onclick = () => {
+      const rows = [["Date", "Subject", "Status"]];
+      history.forEach(s => {
+        const sub = SUBJECTS.find(x=>x.id===s.subjectId);
+        rows.push([s.date, sub ? sub.name : s.subjectId, s.marks[stu.id] === 'P' ? 'Present' : 'Absent']);
+      });
+      downloadCSV(`${stu.roll}_attendance_history.csv`, rows);
+    };
+  }
+}
+
+function renderAdmin(){
+  app.innerHTML = `
+    <div class="toolbar">
+      <span class="who">Signed in as <b>Administrator</b></span>
+      <button class="btn secondary small" id="logoutBtn">Sign out</button>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Add department</h3></div>
+      <div class="panel-body">
+        <p class="hint">Each department gets its own set of years, subjects, faculty and students.</p>
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label>Department code</label>
+            <input type="text" id="newDeptId" placeholder="e.g. ECE">
+          </div>
+          <div>
+            <label>Department name</label>
+            <input type="text" id="newDeptName" placeholder="e.g. Electronics and Communication Engineering">
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="btn" id="addDeptBtn" style="margin-top:0;">Add department</button>
+          </div>
+        </div>
+        <div id="deptErr" class="error-msg"></div>
+
+        ${DEPARTMENTS.length === 0 ? '<p class="empty">No departments yet.</p>' : DEPARTMENTS.map(d => `
+          <div class="role-row">
+            <span>${d.name} <span class="tag">${d.id}</span></span>
+            <span style="display:flex; align-items:center; gap:10px;">
+              <span class="tag">${facultyForDept(d.id).length} faculty · ${STUDENTS.filter(s=>s.dept===d.id).length} students</span>
+              <button class="btn secondary small" data-remove-dept="${d.id}">Remove</button>
+            </span>
+          </div>`).join('')}
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h3>Add head of department</h3></div>
+      <div class="panel-body">
+        <p class="hint">A head of department can see and edit every year, and can add their own subjects, sub-faculty, and students from their own login.</p>
+        <div class="field-row" style="align-items:flex-end;">
+          <div>
+            <label>Department</label>
+            ${DEPARTMENTS.length
+              ? `<select id="newHeadDept">${DEPARTMENTS.map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}</select>`
+              : `<input type="text" id="newHeadDept" placeholder="No departments yet" value="" disabled>`}
+          </div>
+          <div>
+            <label>Staff ID</label>
+            <input type="text" id="newHeadId" placeholder="e.g. ECE1">
+          </div>
+          <div>
+            <label>Full name</label>
+            <input type="text" id="newHeadName" placeholder="Head of department name">
+          </div>
+          <div>
+            <label>Password</label>
+            <input type="text" id="newHeadPw" placeholder="Password">
+          </div>
+          <div style="flex:0 0 auto;">
+            <button class="btn" id="addHeadBtn" style="margin-top:0;">Add head</button>
+          </div>
+        </div>
+        <div id="headErr" class="error-msg"></div>
+
+        ${DEPARTMENTS.map(d => {
+          const heads = facultyForDept(d.id).filter(f => f.years.length > 1);
+          return `<div class="sub-heading">${d.name}</div>` + (heads.length === 0 ? '<p class="empty">No head assigned yet.</p>' :
+            heads.map(f => `<div class="role-row"><span>${f.name} <span class="tag">${f.id}</span></span></div>`).join(''));
+        }).join('')}
+      </div>
+    </section>
+  `;
+
+  document.getElementById('logoutBtn').onclick = doLogout;
+
+  document.getElementById('addDeptBtn').onclick = () => {
+    const id = document.getElementById('newDeptId').value.trim();
+    const name = document.getElementById('newDeptName').value.trim();
+    const errEl = document.getElementById('deptErr');
+    if (!id || !name){ errEl.textContent = "Enter both a department code and a name."; return; }
+    if (DEPARTMENTS.some(d => d.id.toLowerCase() === id.toLowerCase())){ errEl.textContent = "That department code is already in use."; return; }
+    addDepartment(id, name);
+    render();
+  };
+
+  app.querySelectorAll('[data-remove-dept]').forEach(btn => {
+    btn.onclick = () => {
+      if (!confirm("Remove this department? Its subjects, faculty, students, and attendance history will all be deleted too. This can't be undone.")) return;
+      removeDepartment(btn.dataset.removeDept);
+      render();
+    };
+  });
+
+  if (document.getElementById('addHeadBtn')){
+    document.getElementById('addHeadBtn').onclick = () => {
+      const dept = document.getElementById('newHeadDept').value;
+      const id = document.getElementById('newHeadId').value.trim();
+      const name = document.getElementById('newHeadName').value.trim();
+      const password = document.getElementById('newHeadPw').value.trim();
+      const errEl = document.getElementById('headErr');
+      if (!dept){ errEl.textContent = "Add a department first."; return; }
+      if (!id || !name || !password){ errEl.textContent = "Fill in staff ID, name, and password."; return; }
+      if (FACULTY.some(f => f.id.toLowerCase() === id.toLowerCase())){ errEl.textContent = "That staff ID is already in use."; return; }
+      addFaculty(id, name, password, dept, [...YEARS]);
+      render();
+    };
+  }
+}
+
+function doLogout(){
+  state = { screen:"login", role:state.role, userId:null, draftMarks:{}, selSubject:null, selYear:null, selDate: new Date().toISOString().slice(0,10), activeSection:null };
+  render();
+}
+
+</script>
+</body>
+</html>
